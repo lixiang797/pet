@@ -4,7 +4,6 @@ using UnityEngine;
 public sealed class PlayerProgress : MonoBehaviour
 {
     public static PlayerProgress Instance { get; private set; }
-
     public int Coins { get; private set; }
     public int Experience { get; private set; }
     public string SelectedAnimalName { get; private set; } = "Rabbit";
@@ -12,80 +11,44 @@ public sealed class PlayerProgress : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
         Load();
     }
 
-    public void UnlockAnimal(string animalName)
+    public bool IsUnlocked(string name) => UnlockedAnimals.Contains(name);
+    public void UnlockAnimal(string name)
     {
-        if (string.IsNullOrWhiteSpace(animalName))
-            return;
-
-        if (!UnlockedAnimals.Contains(animalName))
-            UnlockedAnimals.Add(animalName);
-
+        if (string.IsNullOrWhiteSpace(name)) return;
+        if (!UnlockedAnimals.Contains(name)) UnlockedAnimals.Add(name);
         Save();
     }
-
-    public bool IsUnlocked(string animalName)
+    public void SelectAnimal(string name)
     {
-        return UnlockedAnimals.Contains(animalName);
+        if (IsUnlocked(name)) { SelectedAnimalName = name; Save(); }
     }
-
-    public void SelectAnimal(string animalName)
+    public bool SpendCoins(int amount)
     {
-        if (IsUnlocked(animalName))
-        {
-            SelectedAnimalName = animalName;
-            Save();
-        }
+        if (amount < 0 || Coins < amount) return false;
+        Coins -= amount; Save(); return true;
     }
-
-    public void AddCoins(int amount)
+    public void AddCoins(int amount) { Coins = Mathf.Max(0, Coins + amount); Save(); }
+    public void AddExperience(int amount) { Experience = Mathf.Max(0, Experience + amount); Save(); }
+    public int GetSpeedTraining(string name) => PlayerPrefs.GetInt("pet_speed_" + name, 0);
+    public int GetJumpTraining(string name) => PlayerPrefs.GetInt("pet_jump_" + name, 0);
+    public bool Train(string name, bool speed)
     {
-        Coins += amount;
-        Save();
+        if (!SpendCoins(50)) return false;
+        string key = speed ? "pet_speed_" : "pet_jump_";
+        PlayerPrefs.SetInt(key + name, PlayerPrefs.GetInt(key + name, 0) + 1);
+        PlayerPrefs.Save(); return true;
     }
-
-    public void AddExperience(int amount)
+    public void ApplyPlayerReward(int rank)
     {
-        Experience += amount;
-        Save();
-    }
-
-    public void ApplyRaceRewards(List<AnimalController> finishOrder)
-    {
-        if (finishOrder == null)
-            return;
-
-        for (int i = 0; i < finishOrder.Count; i++)
-        {
-            AnimalController racer = finishOrder[i];
-            if (racer == null)
-                continue;
-
-            int rewardCoins = i == 0 ? 120 : i == 1 ? 80 : 40;
-            int rewardXp = i == 0 ? 50 : i == 1 ? 30 : 15;
-
-            AddCoins(rewardCoins);
-            AddExperience(rewardXp);
-        }
-    }
-
-    private void Save()
-    {
-        PlayerPrefs.SetInt("pet_coins", Coins);
-        PlayerPrefs.SetInt("pet_xp", Experience);
-        PlayerPrefs.SetString("pet_selectedAnimal", SelectedAnimalName);
-        PlayerPrefs.SetString("pet_unlockedAnimals", string.Join(",", UnlockedAnimals));
-        PlayerPrefs.Save();
+        int coins = rank == 1 ? 120 : rank == 2 ? 80 : 40;
+        int xp = rank == 1 ? 50 : rank == 2 ? 30 : 15;
+        AddCoins(coins); AddExperience(xp);
     }
 
     private void Load()
@@ -93,22 +56,19 @@ public sealed class PlayerProgress : MonoBehaviour
         Coins = PlayerPrefs.GetInt("pet_coins", 300);
         Experience = PlayerPrefs.GetInt("pet_xp", 0);
         SelectedAnimalName = PlayerPrefs.GetString("pet_selectedAnimal", "Rabbit");
-
-        string unlocked = PlayerPrefs.GetString("pet_unlockedAnimals", "Rabbit,Turtle,Monkey");
+        string saved = PlayerPrefs.GetString("pet_unlockedAnimals", "Rabbit,Turtle,Monkey");
         UnlockedAnimals.Clear();
-
-        string[] parts = unlocked.Split(',');
-        foreach (string part in parts)
-        {
-            if (!string.IsNullOrWhiteSpace(part))
-                UnlockedAnimals.Add(part.Trim());
-        }
-
-        if (UnlockedAnimals.Count == 0)
-        {
-            UnlockedAnimals.Add("Rabbit");
-            UnlockedAnimals.Add("Turtle");
-            UnlockedAnimals.Add("Monkey");
-        }
+        foreach (string part in saved.Split(','))
+            if (!string.IsNullOrWhiteSpace(part) && !UnlockedAnimals.Contains(part.Trim())) UnlockedAnimals.Add(part.Trim());
+        if (UnlockedAnimals.Count == 0) { UnlockedAnimals.Add("Rabbit"); UnlockedAnimals.Add("Turtle"); UnlockedAnimals.Add("Monkey"); }
+        if (!IsUnlocked(SelectedAnimalName)) SelectedAnimalName = "Rabbit";
+    }
+    private void Save()
+    {
+        PlayerPrefs.SetInt("pet_coins", Coins);
+        PlayerPrefs.SetInt("pet_xp", Experience);
+        PlayerPrefs.SetString("pet_selectedAnimal", SelectedAnimalName);
+        PlayerPrefs.SetString("pet_unlockedAnimals", string.Join(",", UnlockedAnimals));
+        PlayerPrefs.Save();
     }
 }

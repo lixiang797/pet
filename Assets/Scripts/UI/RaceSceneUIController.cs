@@ -1,117 +1,54 @@
 using System.Text;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public sealed class RaceSceneUIController : MonoBehaviour
 {
-    [Header("Race UI")]
-    [SerializeField] private TMP_Text statusText;
-    [SerializeField] private TMP_Text rankText;
-    [SerializeField] private Button startButton;
-    [SerializeField] private Button backToMenuButton;
-
-    [Header("Result UI")]
-    [SerializeField] private GameObject resultPanel;
-    [SerializeField] private TMP_Text resultText;
-    [SerializeField] private Button replayButton;
-    [SerializeField] private Button menuButton;
+    public Text statusText;
+    public Text rankText;
+    public Text skillText;
+    public Button startButton;
+    public GameObject resultPanel;
+    public Text resultText;
+    public Button replayButton;
+    public Button menuButton;
 
     private void Start()
     {
-        startButton?.onClick.AddListener(StartRace);
-        backToMenuButton?.onClick.AddListener(LoadMenu);
-        replayButton?.onClick.AddListener(Replay);
-        menuButton?.onClick.AddListener(LoadMenu);
-
-        if (resultPanel != null)
-            resultPanel.SetActive(false);
-
-        if (statusText != null)
-        {
-            RaceProjectType project = RaceManager.Instance != null
-                ? RaceManager.Instance.SelectedProject
-                : RaceProjectType.Sprint;
-            statusText.text = $"准备比赛：{project}";
-        }
-
-        RefreshRanking();
+        if (startButton != null) startButton.onClick.AddListener(() => RaceManager.Instance?.StartRace());
+        if (replayButton != null) replayButton.onClick.AddListener(() => GameFlowManager.Instance?.ReplayRace());
+        if (menuButton != null) menuButton.onClick.AddListener(() => GameFlowManager.Instance?.LoadMenuScene());
+        if (resultPanel != null) resultPanel.SetActive(false);
     }
-
     private void Update()
     {
-        if (RaceManager.Instance == null)
-            return;
-
-        if (RaceManager.Instance.RaceStarted && statusText != null)
-            statusText.text = "比赛进行中！WASD 移动，空格跳跃";
-
-        RefreshRanking();
+        RaceManager race = RaceManager.Instance;
+        if (race == null) return;
+        if (statusText != null) statusText.text = race.RaceStarted ? "GO!  A/D move · Space jump · Left Shift skill" : "Ready: " + race.SelectedProject;
+        if (race.PlayerRacer != null && skillText != null)
+        {
+            float cd = race.PlayerRacer.SkillCooldown;
+            skillText.text = race.PlayerRacer.SkillName + (cd <= 0 ? " READY [Left Shift]" : " cooldown " + cd.ToString("0.0") + "s");
+        }
+        RefreshRank(race);
     }
-
-    private void StartRace()
+    private void RefreshRank(RaceManager race)
     {
-        if (RaceManager.Instance == null)
-        {
-            Debug.LogError("AnimalRaceScene 场景中找不到 RaceManager。");
-            return;
-        }
-
-        if (startButton != null)
-            startButton.gameObject.SetActive(false);
-
-        RaceManager.Instance.StartRace();
-    }
-
-    private void RefreshRanking()
-    {
-        if (rankText == null || RaceManager.Instance == null)
-            return;
-
-        var order = RaceManager.Instance.FinishOrder;
-        if (order.Count == 0)
-        {
-            rankText.text = "完赛名次将在这里显示";
-            return;
-        }
-
-        StringBuilder text = new StringBuilder("已完赛：\n");
-        for (int i = 0; i < order.Count; i++)
-        {
-            if (order[i] != null)
-                text.AppendLine($"{i + 1}. {order[i].AnimalName}");
-        }
+        if (rankText == null) return;
+        StringBuilder text = new StringBuilder("Finished:\n");
+        for (int i = 0; i < race.FinishOrder.Count; i++)
+            if (race.FinishOrder[i] != null) text.AppendLine((i + 1) + ". " + race.FinishOrder[i].AnimalName);
         rankText.text = text.ToString();
     }
-
     public void ShowResults()
     {
-        if (resultPanel != null)
-            resultPanel.SetActive(true);
-
-        if (statusText != null)
-            statusText.text = "比赛结束！";
-
-        if (resultText == null || RaceManager.Instance == null)
-            return;
-
-        StringBuilder text = new StringBuilder("比赛结果\n");
-        var order = RaceManager.Instance.FinishOrder;
-        for (int i = 0; i < order.Count; i++)
-        {
-            if (order[i] != null)
-                text.AppendLine($"第 {i + 1} 名：{order[i].AnimalName}");
-        }
+        if (resultPanel != null) resultPanel.SetActive(true);
+        if (resultText == null || RaceManager.Instance == null) return;
+        StringBuilder text = new StringBuilder("RACE RESULTS\n");
+        for (int i = 0; i < RaceManager.Instance.FinishOrder.Count; i++)
+            if (RaceManager.Instance.FinishOrder[i] != null) text.AppendLine($"{i + 1}. {RaceManager.Instance.FinishOrder[i].AnimalName}");
+        int rank = RaceManager.Instance.PlayerRacer != null ? RaceManager.Instance.FinishOrder.IndexOf((AnimalController)RaceManager.Instance.PlayerRacer) + 1 : 0;
+        if (rank > 0) text.AppendLine("\nReward: " + (rank == 1 ? 120 : rank == 2 ? 80 : 40) + " coins");
         resultText.text = text.ToString();
-    }
-
-    private void Replay()
-    {
-        GameFlowManager.Instance?.ReplayRace();
-    }
-
-    private void LoadMenu()
-    {
-        GameFlowManager.Instance?.LoadMenuScene();
     }
 }

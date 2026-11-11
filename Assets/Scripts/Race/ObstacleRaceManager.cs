@@ -3,28 +3,12 @@ using UnityEngine;
 public sealed class ObstacleRaceManager : MonoBehaviour
 {
     [SerializeField] private GameObject[] obstacles;
-
-    public void EnableObstacles()
+    public void Configure(GameObject[] items) => obstacles = items;
+    public void EnableObstacles() => SetActive(true);
+    public void DisableObstacles() => SetActive(false);
+    private void SetActive(bool active)
     {
-        if (obstacles == null)
-            return;
-
-        foreach (GameObject obstacle in obstacles)
-        {
-            if (obstacle != null)
-                obstacle.SetActive(true);
-        }
-    }
-
-    public void DisableObstacles()
-    {
-        if (obstacles == null)
-            return;
-
-        foreach (GameObject obstacle in obstacles)
-        {
-            if (obstacle != null)
-                obstacle.SetActive(false);
-        }
+        if (obstacles == null) return;
+        foreach (GameObject item in obstacles) if (item != null) item.SetActive(active);
     }
 }

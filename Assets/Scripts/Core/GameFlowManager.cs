@@ -1,14 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>Persists menu selections while switching between scenes.</summary>
 public sealed class GameFlowManager : MonoBehaviour
 {
     public static GameFlowManager Instance { get; private set; }
-
-    [SerializeField] private string menuSceneName = "MainMenu";
-    [SerializeField] private string raceSceneName = "AnimalRaceScene";
-
     public string SelectedAnimalName { get; private set; } = "Rabbit";
     public RaceProjectType SelectedProject { get; private set; } = RaceProjectType.Sprint;
 
@@ -19,39 +14,18 @@ public sealed class GameFlowManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
-    public void SelectAnimal(string animalName)
+    public void SelectAnimal(string name)
     {
-        if (!string.IsNullOrWhiteSpace(animalName))
-            SelectedAnimalName = animalName;
+        if (!string.IsNullOrWhiteSpace(name)) SelectedAnimalName = name;
     }
 
-    public void SelectProject(RaceProjectType project)
-    {
-        SelectedProject = project;
-    }
-
-    public void LoadRaceScene()
-    {
-        SceneManager.LoadScene(raceSceneName);
-    }
-
-    public void LoadMenuScene()
-    {
-        SceneManager.LoadScene(menuSceneName);
-    }
-
-    public void ReplayRace()
-    {
-        SceneManager.LoadScene(raceSceneName);
-    }
-
-    public void QuitGame()
-    {
-        Application.Quit();
-    }
+    public void SelectProject(RaceProjectType project) => SelectedProject = project;
+    public void LoadRaceScene() => SceneManager.LoadScene("AnimalRaceScene");
+    public void LoadMenuScene() => SceneManager.LoadScene("MainMenu");
+    public void ReplayRace() => SceneManager.LoadScene("AnimalRaceScene");
+    public void QuitGame() => Application.Quit();
 }

@@ -3,5 +3,7 @@ using UnityEngine;
 public enum RaceProjectType
 {
     Sprint,
-    Obstacle
+    Obstacle,
+    TugOfWar,
+    Relay
 }
